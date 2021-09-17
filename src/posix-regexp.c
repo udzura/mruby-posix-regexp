@@ -23,6 +23,20 @@ static mrb_value mrb_posixmatchdata_generate(mrb_state *mrb, mrb_value reg,
                                              size_t nmatch, regmatch_t *matches,
                                              char* input, size_t offset);
 
+const char match_gv_names[][3] = \
+  {
+   "$1",
+   "$2",
+   "$3",
+   "$4",
+   "$5",
+   "$6",
+   "$7",
+   "$8",
+   "$9",
+   {0}
+  };
+
 static void mrb_regfree(mrb_state *mrb, void *p) {
   regfree((regex_t *)p);
 }
@@ -128,6 +142,10 @@ static mrb_value mrb_posixregexp_match(mrb_state *mrb, mrb_value self)
   case REG_NOMATCH:
     mrb_free(mrb, matches);
     mrb_gv_set(mrb, mrb_intern_lit(mrb, "$matchdata"), mrb_ary_new(mrb));
+    for (int i = 0; match_gv_names[i]; i++) {
+      mrb_gv_set(mrb, mrb_intern_cstr(mrb, match_gv_names[i]), mrb_ary_new(mrb));
+    }
+
     return mrb_nil_value();
     break;
   default:
@@ -141,6 +159,11 @@ static mrb_value mrb_posixregexp_match(mrb_state *mrb, mrb_value self)
 
   mrb_value matched = mrb_posixmatchdata_generate(mrb, self, nmatch, matches, input - pos, pos);
   mrb_gv_set(mrb, mrb_intern_lit(mrb, "$matchdata"), matched);
+  for (int i = 0; (i < nmatch - 1 && match_gv_names[i]) ; i++) {
+    mrb_gv_set(mrb, mrb_intern_cstr(mrb, match_gv_names[i]),
+               mrb_funcall(mrb, matched, "[]", 1, mrb_fixnum_value(i + 1)));
+  }
+
   return matched;
 }
 
