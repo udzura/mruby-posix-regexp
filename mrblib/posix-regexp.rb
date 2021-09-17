@@ -48,11 +48,16 @@ class PosixMatchData
   alias size length
 
   def to_a
-    m = (0...length).to_a.map do |i|
-      @string[self.begin(i)...self.end(i)]
-    end
-    m[0] = "" if m[0].nil?
-    m
+    @captured ||= begin
+                    m = (0...length).to_a.map do |i|
+                      if self.begin(i) && self.end(i)
+                        s = @string[self.begin(i)...self.end(i)]
+                        s.empty? ? nil : s
+                      end
+                    end
+                    m[0] = "" if m[0].nil?
+                    m
+                  end
   end
 
   def [](*args)
@@ -68,7 +73,7 @@ class PosixMatchData
   end
 
   def captures
-    a = to_a
+    a = to_a.dup
     a.shift
     a
   end

@@ -33,4 +33,4 @@ under the MIT License:
 
 ## Thanks
 
-- Referred from [mruby-pure-regexp](https://github.com/WindProphet/mruby-pure-regexp) in many Ruby methods.
+- Referred from [mruby-pure-regexp](https://github.com/WindProphet/mruby-pure-regexp) in many Ruby methods and basic test cases.

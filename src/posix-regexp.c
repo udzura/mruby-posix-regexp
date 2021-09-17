@@ -65,6 +65,7 @@ static mrb_value mrb_posixregexp_init(mrb_state *mrb, mrb_value self)
   mrb_get_args(mrb, "zz", &pattern, &flagstr);
   reg = mrb_malloc(mrb, sizeof(regex_t));
 
+  flag |= REG_NEWLINE;
   for(int i = 0; flagstr[i] != '\0'; ++i) {
     switch (flagstr[i]) {
     /* case 'e': */
@@ -73,7 +74,7 @@ static mrb_value mrb_posixregexp_init(mrb_state *mrb, mrb_value self)
       flag |= REG_ICASE;
       break;
     case 'm':
-      flag |= REG_NEWLINE;
+      flag ^= REG_NEWLINE;
       break;
     default:
       mrb_raise(mrb, E_REGEXP_ERROR, "unsupported flag");
@@ -178,7 +179,11 @@ static mrb_value mrb_posixmatchdata_begin(mrb_state *mrb, mrb_value self)
   if(pos >= data->len)
     return mrb_nil_value();
 
-  return mrb_fixnum_value(data->matches[pos].rm_so + data->offset);
+  int d = data->matches[pos].rm_so;
+  if (d == -1)
+    return mrb_nil_value();
+
+  return mrb_fixnum_value(d + data->offset);
 }
 
 static mrb_value mrb_posixmatchdata_end(mrb_state *mrb, mrb_value self)
@@ -193,7 +198,11 @@ static mrb_value mrb_posixmatchdata_end(mrb_state *mrb, mrb_value self)
   if(pos > data->len)
     return mrb_nil_value();
 
-  return mrb_fixnum_value(data->matches[pos].rm_eo + data->offset);
+  int d = data->matches[pos].rm_eo;
+  if (d == -1)
+    return mrb_nil_value();
+
+  return mrb_fixnum_value(d + data->offset);
 }
 
 void mrb_mruby_posix_regexp_gem_init(mrb_state *mrb)
