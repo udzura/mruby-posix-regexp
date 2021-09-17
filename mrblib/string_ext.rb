@@ -23,7 +23,7 @@ class String
           a << c
         end
       end
-      offset += m.to_s.length
+      offset = m.end(0)
     end
     if block_given?
       self
