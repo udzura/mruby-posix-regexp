@@ -142,7 +142,7 @@ static mrb_value mrb_posixregexp_match(mrb_state *mrb, mrb_value self)
   case REG_NOMATCH:
     mrb_free(mrb, matches);
     mrb_gv_set(mrb, mrb_intern_lit(mrb, "$matchdata"), mrb_ary_new(mrb));
-    for (int i = 0; match_gv_names[i]; i++) {
+    for (int i = 0; !match_gv_names[i]; i++) {
       mrb_gv_set(mrb, mrb_intern_cstr(mrb, match_gv_names[i]), mrb_ary_new(mrb));
     }
 
