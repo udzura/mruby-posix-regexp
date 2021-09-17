@@ -10,6 +10,7 @@
 #include <mruby/data.h>
 #include <mruby/variable.h>
 #include <mruby/value.h>
+#include <mruby/array.h>
 #include <mruby/error.h>
 #include "mrb_posix_regexp.h"
 
@@ -122,6 +123,7 @@ static mrb_value mrb_posixregexp_match(mrb_state *mrb, mrb_value self)
     break;
   case REG_NOMATCH:
     mrb_free(mrb, matches);
+    mrb_gv_set(mrb, mrb_intern_lit(mrb, "$matchdata"), mrb_ary_new(mrb));
     return mrb_nil_value();
     break;
   default:
@@ -133,7 +135,9 @@ static mrb_value mrb_posixregexp_match(mrb_state *mrb, mrb_value self)
     }
   }
 
-  return mrb_posixmatchdata_generate(mrb, nmatch, matches, input - pos, pos);
+  mrb_value matched = mrb_posixmatchdata_generate(mrb, nmatch, matches, input - pos, pos);
+  mrb_gv_set(mrb, mrb_intern_lit(mrb, "$matchdata"), matched);
+  return matched;
 }
 
 static mrb_value mrb_posixmatchdata_generate(mrb_state *mrb, size_t nmatch, regmatch_t *matches, char* input, size_t offset)
@@ -192,6 +196,9 @@ void mrb_mruby_posix_regexp_gem_init(mrb_state *mrb)
   posixregexp = mrb_define_class(mrb, "PosixRegexp", mrb->object_class);
   mrb_define_method(mrb, posixregexp, "initialize", mrb_posixregexp_init, MRB_ARGS_REQ(2));
   mrb_define_method(mrb, posixregexp, "match", mrb_posixregexp_match, MRB_ARGS_ARG(1, 1));
+
+  mrb_define_const(mrb, posixregexp, "REG_ICASE", mrb_fixnum_value(REG_ICASE));
+  mrb_define_const(mrb, posixregexp, "REG_NEWLINE", mrb_fixnum_value(REG_NEWLINE));
 
   struct RClass *matchdata;
   matchdata = mrb_define_class(mrb, "PosixMatchData", mrb->object_class);

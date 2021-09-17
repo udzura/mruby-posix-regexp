@@ -16,6 +16,27 @@ class PosixRegexp
   def ==(other)
     eql?(other)
   end
+
+  def ===(string)
+    !match(string).nil?
+  end
+
+  def =~(string)
+    return nil if string.nil?
+    m = match(string)
+    m ? m.begin(0) : nil
+  end
+
+  def casefold?
+    @option & REG_ICASE == REG_ICASE
+  end
+
+  $matchdata = []
+
+  def inspect
+    s = source.gsub(/\//, '\/')
+    "/#{s}/"
+  end
 end
 
 class PosixMatchData
@@ -23,6 +44,8 @@ class PosixMatchData
     # Cannot be instanciate from Ruby space
     undef new
   end
+
+
 end
 
 class PosixRegexpError < RegexpError
