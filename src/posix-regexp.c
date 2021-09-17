@@ -8,6 +8,7 @@
 
 #include <mruby.h>
 #include <mruby/data.h>
+#include <mruby/class.h>
 #include <mruby/variable.h>
 #include <mruby/value.h>
 #include <mruby/array.h>
@@ -209,6 +210,7 @@ void mrb_mruby_posix_regexp_gem_init(mrb_state *mrb)
 {
   struct RClass *posixregexp;
   posixregexp = mrb_define_class(mrb, "PosixRegexp", mrb->object_class);
+  MRB_SET_INSTANCE_TT(posixregexp, MRB_TT_DATA);
   mrb_define_method(mrb, posixregexp, "initialize", mrb_posixregexp_init, MRB_ARGS_REQ(2));
   mrb_define_method(mrb, posixregexp, "match", mrb_posixregexp_match, MRB_ARGS_ARG(1, 1));
 
@@ -217,6 +219,7 @@ void mrb_mruby_posix_regexp_gem_init(mrb_state *mrb)
 
   struct RClass *matchdata;
   matchdata = mrb_define_class(mrb, "PosixMatchData", mrb->object_class);
+  MRB_SET_INSTANCE_TT(matchdata, MRB_TT_DATA);
   mrb_define_method(mrb, matchdata, "begin", mrb_posixmatchdata_begin, MRB_ARGS_REQ(1));
   mrb_define_method(mrb, matchdata, "end", mrb_posixmatchdata_end, MRB_ARGS_REQ(1));
   DONE;
