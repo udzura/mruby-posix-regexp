@@ -18,7 +18,9 @@
 #include <regex.h>
 
 #define DONE mrb_gc_arena_restore(mrb, 0);
-static mrb_value mrb_posixmatchdata_generate(mrb_state *mrb, size_t nmatch, regmatch_t *matches, char* input, size_t offset);
+static mrb_value mrb_posixmatchdata_generate(mrb_state *mrb, mrb_value reg,
+                                             size_t nmatch, regmatch_t *matches,
+                                             char* input, size_t offset);
 
 static void mrb_regfree(mrb_state *mrb, void *p) {
   regfree((regex_t *)p);
@@ -105,7 +107,7 @@ static mrb_value mrb_posixregexp_match(mrb_state *mrb, mrb_value self)
   mrb_int input_len, pos = 0;
 
   regmatch_t *matches;
-  size_t nmatch = reg->re_nsub;
+  size_t nmatch = reg->re_nsub + 1;
   matches = mrb_calloc(mrb, nmatch, sizeof(regmatch_t));
 
   mrb_get_args(mrb, "z|i", &input, &pos);
@@ -135,12 +137,14 @@ static mrb_value mrb_posixregexp_match(mrb_state *mrb, mrb_value self)
     }
   }
 
-  mrb_value matched = mrb_posixmatchdata_generate(mrb, nmatch, matches, input - pos, pos);
+  mrb_value matched = mrb_posixmatchdata_generate(mrb, self, nmatch, matches, input - pos, pos);
   mrb_gv_set(mrb, mrb_intern_lit(mrb, "$matchdata"), matched);
   return matched;
 }
 
-static mrb_value mrb_posixmatchdata_generate(mrb_state *mrb, size_t nmatch, regmatch_t *matches, char* input, size_t offset)
+static mrb_value mrb_posixmatchdata_generate(mrb_state *mrb, mrb_value reg,
+                                             size_t nmatch, regmatch_t *matches,
+                                             char* input, size_t offset)
 {
   struct RClass *c = mrb_class_get(mrb, "PosixMatchData");
   if(!c)
@@ -155,7 +159,9 @@ static mrb_value mrb_posixmatchdata_generate(mrb_state *mrb, size_t nmatch, regm
   data->matches = matches;
   DATA_PTR(self) = data;
 
-  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@input"), mrb_str_new_cstr(mrb, input));
+  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@regexp"), reg);
+  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@string"), mrb_str_new_cstr(mrb, input));
+  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@length"), mrb_fixnum_value(nmatch));
 
   return self;
 }
@@ -169,7 +175,7 @@ static mrb_value mrb_posixmatchdata_begin(mrb_state *mrb, mrb_value self)
   mrb_int pos;
   mrb_get_args(mrb, "i", &pos);
 
-  if(pos > data->len)
+  if(pos >= data->len)
     return mrb_nil_value();
 
   return mrb_fixnum_value(data->matches[pos].rm_so + data->offset);
