@@ -1,4 +1,4 @@
-# mruby-posix-regexp
+# mruby-posix-regexp [![CI](https://github.com/udzura/mruby-posix-regexp/actions/workflows/ci.yml/badge.svg)](https://github.com/udzura/mruby-posix-regexp/actions/workflows/ci.yml)
 
 Regexp class with libc regex (POSIX Regex) backend
 
