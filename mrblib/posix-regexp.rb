@@ -19,6 +19,10 @@ class PosixRegexp
 end
 
 class PosixMatchData
+  class << self
+    # Cannot be instanciate from Ruby space
+    undef new
+  end
 end
 
 class PosixRegexpError < RegexpError

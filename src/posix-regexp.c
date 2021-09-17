@@ -17,6 +17,7 @@
 #include <regex.h>
 
 #define DONE mrb_gc_arena_restore(mrb, 0);
+static mrb_value mrb_posixmatchdata_generate(mrb_state *mrb, size_t nmatch, regmatch_t *matches, char* input, size_t offset);
 
 static void mrb_regfree(mrb_state *mrb, void *p) {
   regfree((regex_t *)p);
@@ -25,6 +26,25 @@ static void mrb_regfree(mrb_state *mrb, void *p) {
 static const struct mrb_data_type mrb_posixregexp_data_type = {
   "regex_t", mrb_regfree,
 };
+
+struct mrb_matchdata {
+  mrb_int len;
+  mrb_int offset;
+  regmatch_t *matches;
+};
+
+static void mrb_matchdata_free(mrb_state *mrb, void *p)
+{
+  struct mrb_matchdata* data = p;
+  mrb_free(mrb, data->matches);
+  mrb_free(mrb, data);
+}
+
+static const struct mrb_data_type mrb_posixregexp_matchdata_type = {
+  "mrb_matchdata_free", mrb_matchdata_free,
+};
+
+/* PosixRegexp */
 
 static mrb_value mrb_posixregexp_init(mrb_state *mrb, mrb_value self)
 {
@@ -87,7 +107,7 @@ static mrb_value mrb_posixregexp_match(mrb_state *mrb, mrb_value self)
   size_t nmatch = reg->re_nsub;
   matches = mrb_calloc(mrb, nmatch, sizeof(regmatch_t));
 
-  mrb_get_args(mrb, "zi?", &input, &pos);
+  mrb_get_args(mrb, "z|i", &input, &pos);
   input_len = (mrb_int)strlen(input);
 
   if (pos > input_len)
@@ -113,7 +133,57 @@ static mrb_value mrb_posixregexp_match(mrb_state *mrb, mrb_value self)
     }
   }
 
-  return mrb_fixnum_value(matches[0].rm_so);
+  return mrb_posixmatchdata_generate(mrb, nmatch, matches, input - pos, pos);
+}
+
+static mrb_value mrb_posixmatchdata_generate(mrb_state *mrb, size_t nmatch, regmatch_t *matches, char* input, size_t offset)
+{
+  struct RClass *c = mrb_class_get(mrb, "PosixMatchData");
+  if(!c)
+    mrb_sys_fail(mrb, "[BUG] PosixMatchData undefined");
+
+  mrb_value self = mrb_obj_new(mrb, c, 0, NULL);
+  DATA_TYPE(self) = &mrb_posixregexp_matchdata_type;
+
+  struct mrb_matchdata *data = mrb_malloc(mrb, sizeof(struct mrb_matchdata));
+  data->len = (mrb_int)nmatch;
+  data->offset = (mrb_int)offset;
+  data->matches = matches;
+  DATA_PTR(self) = data;
+
+  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@input"), mrb_str_new_cstr(mrb, input));
+
+  return self;
+}
+
+static mrb_value mrb_posixmatchdata_begin(mrb_state *mrb, mrb_value self)
+{
+  struct mrb_matchdata *data = DATA_PTR(self);
+  if(!data)
+    mrb_sys_fail(mrb, "[BUG] PosixMatchData invaidly initialized");
+
+  mrb_int pos;
+  mrb_get_args(mrb, "i", &pos);
+
+  if(pos > data->len)
+    return mrb_nil_value();
+
+  return mrb_fixnum_value(data->matches[pos].rm_so + data->offset);
+}
+
+static mrb_value mrb_posixmatchdata_end(mrb_state *mrb, mrb_value self)
+{
+  struct mrb_matchdata *data = DATA_PTR(self);
+  if(!data)
+    mrb_sys_fail(mrb, "[BUG] PosixMatchData invaidly initialized");
+
+  mrb_int pos;
+  mrb_get_args(mrb, "i", &pos);
+
+  if(pos > data->len)
+    return mrb_nil_value();
+
+  return mrb_fixnum_value(data->matches[pos].rm_eo + data->offset);
 }
 
 void mrb_mruby_posix_regexp_gem_init(mrb_state *mrb)
@@ -122,6 +192,11 @@ void mrb_mruby_posix_regexp_gem_init(mrb_state *mrb)
   posixregexp = mrb_define_class(mrb, "PosixRegexp", mrb->object_class);
   mrb_define_method(mrb, posixregexp, "initialize", mrb_posixregexp_init, MRB_ARGS_REQ(2));
   mrb_define_method(mrb, posixregexp, "match", mrb_posixregexp_match, MRB_ARGS_ARG(1, 1));
+
+  struct RClass *matchdata;
+  matchdata = mrb_define_class(mrb, "PosixMatchData", mrb->object_class);
+  mrb_define_method(mrb, matchdata, "begin", mrb_posixmatchdata_begin, MRB_ARGS_REQ(1));
+  mrb_define_method(mrb, matchdata, "end", mrb_posixmatchdata_end, MRB_ARGS_REQ(1));
   DONE;
 }
 
