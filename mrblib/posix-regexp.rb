@@ -10,11 +10,15 @@ class PosixRegexp
   alias options option
 
   def eql?(other)
-    [source, options] == [other.source, other.options]
+    self.hash == other.hash
   end
 
   def ==(other)
     eql?(other)
+  end
+
+  def hash
+    [source, options].hash
   end
 
   def ===(string)

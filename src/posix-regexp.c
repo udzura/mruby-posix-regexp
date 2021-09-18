@@ -13,6 +13,11 @@
 #include <mruby/value.h>
 #include <mruby/array.h>
 #include <mruby/error.h>
+
+#ifdef MRB_DEBUG
+#include <mruby/string.h>
+#endif
+
 #include "mrb_posix_regexp.h"
 
 #include <string.h>
@@ -105,6 +110,9 @@ static mrb_value mrb_posixregexp_init(mrb_state *mrb, mrb_value self)
   if (err) {
     char buf[1024];
     regerror(err, reg, buf, sizeof(buf));
+    #ifdef MRB_DEBUG
+    mrb_warn(mrb, "source: %s\n", pattern);
+    #endif
     mrb_raise(mrb, E_REGEXP_ERROR, buf);
   }
   DATA_PTR(self) = reg;
@@ -151,6 +159,11 @@ static mrb_value mrb_posixregexp_match(mrb_state *mrb, mrb_value self)
   default:
     {
       char buf[1024];
+      #ifdef MRB_DEBUG
+      mrb_warn(mrb, "source: %s, target: %s\n",
+               RSTRING_PTR(mrb_funcall(mrb, self, "source", 0)),
+               input);
+      #endif
       regerror(err, reg, buf, sizeof(buf));
       mrb_raise(mrb, E_REGEXP_ERROR, buf);
       break;
@@ -210,6 +223,8 @@ static mrb_value mrb_posixmatchdata_begin(mrb_state *mrb, mrb_value self)
   return mrb_fixnum_value(d + data->offset);
 }
 
+mrb_value mrb_posixregexp_quote(mrb_state *mrb, mrb_value self);
+
 static mrb_value mrb_posixmatchdata_end(mrb_state *mrb, mrb_value self)
 {
   struct mrb_matchdata *data = DATA_PTR(self);
@@ -239,6 +254,9 @@ void mrb_mruby_posix_regexp_gem_init(mrb_state *mrb)
 
   mrb_define_const(mrb, posixregexp, "REG_ICASE", mrb_fixnum_value(REG_ICASE));
   mrb_define_const(mrb, posixregexp, "REG_NEWLINE", mrb_fixnum_value(REG_NEWLINE));
+
+  mrb_define_class_method(mrb, posixregexp, "quote", mrb_posixregexp_quote, MRB_ARGS_REQ(1));
+  mrb_define_class_method(mrb, posixregexp, "escape", mrb_posixregexp_quote, MRB_ARGS_REQ(1));
 
   struct RClass *matchdata;
   matchdata = mrb_define_class(mrb, "PosixMatchData", mrb->object_class);
