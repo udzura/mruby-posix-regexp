@@ -43,7 +43,8 @@ const char match_gv_names[][3] = \
   };
 
 static void mrb_regfree(mrb_state *mrb, void *p) {
-  regfree((regex_t *)p);
+  if (p != NULL)
+    regfree((regex_t *)p);
 }
 
 static const struct mrb_data_type mrb_posixregexp_data_type = {
@@ -58,9 +59,11 @@ struct mrb_matchdata {
 
 static void mrb_matchdata_free(mrb_state *mrb, void *p)
 {
-  struct mrb_matchdata* data = p;
-  mrb_free(mrb, data->matches);
-  mrb_free(mrb, data);
+  if (p != NULL) {
+    struct mrb_matchdata* data = p;
+    mrb_free(mrb, data->matches);
+    mrb_free(mrb, data);
+  }
 }
 
 static const struct mrb_data_type mrb_posixregexp_matchdata_type = {
