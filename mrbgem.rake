@@ -8,4 +8,6 @@ MRuby::Gem::Specification.new('mruby-posix-regexp') do |spec|
   spec.add_conflict 'mruby-pcre-regexp'
   spec.add_conflict 'mruby-regexp-pcre'
   spec.add_conflict 'mruby-pure-regexp'
+
+  spec.add_test_dependency 'mruby-io'
 end

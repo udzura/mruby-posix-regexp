@@ -15,3 +15,8 @@ builds:
       branch: HEAD
       commit: 2b6eaff4232b4a9473b864df53c2917080af5dcf
       version: 1.1.0
+    https://github.com/iij/mruby-process.git:
+      url: https://github.com/iij/mruby-process.git
+      branch: master
+      commit: 95da206a5764f4e80146979b8e35bd7a9afd6850
+      version: 0.0.0

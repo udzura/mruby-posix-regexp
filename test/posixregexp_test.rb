@@ -127,7 +127,11 @@ assert('PosixMatchData#values_at') do
 end
 
 assert('String#scan') do
-  assert_equal ["abcd", "efgh", "ijkl"], "abcdefghijklmn".scan(/\w\w\w\w/)
+  if /Darwin/ =~ `uname`
+    assert_equal ["abcd", "efgh", "ijkl"], "abcdefghijklmn".scan(/..../)
+  else
+    assert_equal ["abcd", "efgh", "ijkl"], "abcdefghijklmn".scan(/\w\w\w\w/)
+  end
 
   assert_equal [["b", "cd"], ["f", "gh"], ["j", "kl"]],
   "abcdefghijklmn".scan(/.(.)(..)/)
