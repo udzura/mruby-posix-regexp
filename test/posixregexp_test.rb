@@ -13,6 +13,8 @@ assert('PosixRegexp#match') do
   PosixRegexp.compile("z.z").match("zzz") do |m|
     assert_equal "zzz", m[0]
   end
+
+  assert_not_nil PosixRegexp.compile("z.z", 'mm').match("z\nz")
 end
 
 assert('PosixRegexp#eql?') do

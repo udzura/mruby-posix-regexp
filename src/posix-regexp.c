@@ -97,7 +97,7 @@ static mrb_value mrb_posixregexp_init(mrb_state *mrb, mrb_value self)
       flag |= REG_ICASE;
       break;
     case 'm':
-      flag ^= REG_NEWLINE;
+      flag &= ~REG_NEWLINE;
       break;
     default:
       mrb_raise(mrb, E_REGEXP_ERROR, "unsupported flag");
