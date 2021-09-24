@@ -1,7 +1,9 @@
+require_relative 'mrblib/version'
+
 MRuby::Gem::Specification.new('mruby-posix-regexp') do |spec|
   spec.license = 'MIT'
   spec.authors = 'Uchio Kondo'
-  spec.version = '0.3.0'
+  spec.version = PosixRegexp::VERSION
 
   spec.add_conflict 'mruby-onig-regexp'
   spec.add_conflict 'mruby-hs-regexp'
