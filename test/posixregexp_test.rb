@@ -151,6 +151,8 @@ end
 assert('String#gsub') do
   assert_equal "@-@-ackb@-@-", "acbabackbacbab".gsub(/a.?b/, "@-")
   assert_equal "@-acbcb@-abbackb@-acbcb@-abb", "acbabackbacbab".gsub(/a(.?b)/, '@-\0\1')
+  assert_equal "aBcdaBcd", "abcdabcd".gsub(/b/, 'B')
+  assert_equal "@-acbcb@-abbackb@-acbcbaxxb", "acbabackbacbaxxb".gsub(/a(.?b)/, '@-\0\1')
 end
 
 assert('String#sub') do
