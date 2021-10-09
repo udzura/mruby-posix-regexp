@@ -24,9 +24,7 @@
 #include <regex.h>
 
 #define DONE mrb_gc_arena_restore(mrb, 0);
-static mrb_value mrb_posixmatchdata_generate(mrb_state *mrb, mrb_value reg,
-                                             size_t nmatch, regmatch_t *matches,
-                                             char* input, size_t offset);
+static mrb_value mrb_posixmatchdata_generate(mrb_state *mrb, size_t nmatch, size_t offset);
 
 const char match_gv_names[][3] = \
   {
@@ -43,8 +41,10 @@ const char match_gv_names[][3] = \
   };
 
 static void mrb_regfree(mrb_state *mrb, void *p) {
-  if (p != NULL)
+  if (p != NULL) {
     regfree((regex_t *)p);
+    mrb_free(mrb, p);
+  }
 }
 
 static const struct mrb_data_type mrb_posixregexp_data_type = {
@@ -54,14 +54,13 @@ static const struct mrb_data_type mrb_posixregexp_data_type = {
 struct mrb_matchdata {
   mrb_int len;
   mrb_int offset;
-  regmatch_t *matches;
+  regmatch_t matches[1]; /* matches is variable-length */
 };
 
 static void mrb_matchdata_free(mrb_state *mrb, void *p)
 {
   if (p != NULL) {
     struct mrb_matchdata* data = p;
-    mrb_free(mrb, data->matches);
     mrb_free(mrb, data);
   }
 }
@@ -86,7 +85,6 @@ static mrb_value mrb_posixregexp_init(mrb_state *mrb, mrb_value self)
   DATA_PTR(self) = NULL;
 
   mrb_get_args(mrb, "zz", &pattern, &flagstr);
-  reg = mrb_malloc(mrb, sizeof(regex_t));
 
   flag |= REG_NEWLINE;
   for(int i = 0; flagstr[i] != '\0'; ++i) {
@@ -109,10 +107,13 @@ static mrb_value mrb_posixregexp_init(mrb_state *mrb, mrb_value self)
     flag |= REG_NOSUB;
 
   flag |= REG_EXTENDED;
+  reg = mrb_malloc(mrb, sizeof(regex_t));
   int err = regcomp(reg, pattern, flag);
   if (err) {
     char buf[1024];
     regerror(err, reg, buf, sizeof(buf));
+    regfree(reg);
+    mrb_free(mrb, reg);
     #ifdef MRB_DEBUG
     mrb_warn(mrb, "source: %s\n", pattern);
     #endif
@@ -133,10 +134,6 @@ static mrb_value mrb_posixregexp_match(mrb_state *mrb, mrb_value self)
   char *input;
   mrb_int input_len, pos = 0;
 
-  regmatch_t *matches;
-  size_t nmatch = reg->re_nsub + 1;
-  matches = mrb_calloc(mrb, nmatch, sizeof(regmatch_t));
-
   mrb_get_args(mrb, "z|i", &input, &pos);
   input_len = (mrb_int)strlen(input);
 
@@ -145,13 +142,16 @@ static mrb_value mrb_posixregexp_match(mrb_state *mrb, mrb_value self)
   if (pos)
     input = input + pos;
 
-  int err = regexec(reg, input, nmatch, matches, 0);
+  size_t nmatch = reg->re_nsub + 1;
+  mrb_value matched = mrb_posixmatchdata_generate(mrb, nmatch, pos);
+  struct mrb_matchdata *matchedp = DATA_PTR(matched);
+
+  int err = regexec(reg, input, nmatch, matchedp->matches, 0);
 
   switch (err) {
   case 0:
     break;
   case REG_NOMATCH:
-    mrb_free(mrb, matches);
     mrb_gv_set(mrb, mrb_intern_lit(mrb, "$matchdata"), mrb_ary_new(mrb));
     for (int i = 0; !match_gv_names[i]; i++) {
       mrb_gv_set(mrb, mrb_intern_cstr(mrb, match_gv_names[i]), mrb_ary_new(mrb));
@@ -173,7 +173,10 @@ static mrb_value mrb_posixregexp_match(mrb_state *mrb, mrb_value self)
     }
   }
 
-  mrb_value matched = mrb_posixmatchdata_generate(mrb, self, nmatch, matches, input - pos, pos);
+  mrb_iv_set(mrb, matched, mrb_intern_lit(mrb, "@regexp"), self);
+  mrb_iv_set(mrb, matched, mrb_intern_lit(mrb, "@string"), mrb_str_new_cstr(mrb, input - pos));
+  mrb_iv_set(mrb, matched, mrb_intern_lit(mrb, "@length"), mrb_fixnum_value(nmatch));
+
   mrb_gv_set(mrb, mrb_intern_lit(mrb, "$matchdata"), matched);
   for (int i = 0; (i < nmatch - 1 && match_gv_names[i]) ; i++) {
     mrb_gv_set(mrb, mrb_intern_cstr(mrb, match_gv_names[i]),
@@ -183,9 +186,7 @@ static mrb_value mrb_posixregexp_match(mrb_state *mrb, mrb_value self)
   return matched;
 }
 
-static mrb_value mrb_posixmatchdata_generate(mrb_state *mrb, mrb_value reg,
-                                             size_t nmatch, regmatch_t *matches,
-                                             char* input, size_t offset)
+static mrb_value mrb_posixmatchdata_generate(mrb_state *mrb, size_t nmatch, size_t offset)
 {
   struct RClass *c = mrb_class_get(mrb, "PosixMatchData");
   if(!c)
@@ -194,15 +195,10 @@ static mrb_value mrb_posixmatchdata_generate(mrb_state *mrb, mrb_value reg,
   mrb_value self = mrb_obj_new(mrb, c, 0, NULL);
   DATA_TYPE(self) = &mrb_posixregexp_matchdata_type;
 
-  struct mrb_matchdata *data = mrb_malloc(mrb, sizeof(struct mrb_matchdata));
+  struct mrb_matchdata *data = mrb_calloc(mrb, 1, sizeof(struct mrb_matchdata) + (nmatch - 1) * sizeof(regmatch_t));
   data->len = (mrb_int)nmatch;
   data->offset = (mrb_int)offset;
-  data->matches = matches;
   DATA_PTR(self) = data;
-
-  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@regexp"), reg);
-  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@string"), mrb_str_new_cstr(mrb, input));
-  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@length"), mrb_fixnum_value(nmatch));
 
   return self;
 }
