@@ -28,7 +28,7 @@ static mrb_value mrb_posixmatchdata_generate(mrb_state *mrb, mrb_value reg,
                                              size_t nmatch, regmatch_t *matches,
                                              char* input, size_t offset);
 
-const char match_gv_names[][3] = \
+static const char match_gv_names[][3] =
   {
    "$1",
    "$2",
