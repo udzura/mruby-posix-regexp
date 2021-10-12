@@ -53,6 +53,7 @@ class String
         break if m.begin(0) - index < 0
         index += len
       end
+      str += self.byteslice(index..-1) if index < self.bytesize
       str
     else
       orig_gsub(*args, &block)
