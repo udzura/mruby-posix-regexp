@@ -15,6 +15,12 @@ assert('PosixRegexp#match') do
   end
 
   assert_not_nil PosixRegexp.compile("z.z", 'mm').match("z\nz")
+
+  assert_not_nil PosixRegexp.compile("5").match("123456789", 4)
+  assert_nil PosixRegexp.compile("5").match("123456789", 5)
+  assert_nil PosixRegexp.compile("5").match("123456789", -4)
+  assert_not_nil PosixRegexp.compile("5").match("123456789", -5)
+  assert_nil PosixRegexp.compile("5").match("123456789", -0x01000000)
 end
 
 assert('PosixRegexp#eql?') do
