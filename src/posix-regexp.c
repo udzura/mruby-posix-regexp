@@ -26,6 +26,20 @@
 #define DONE mrb_gc_arena_restore(mrb, 0);
 static mrb_value mrb_posixmatchdata_generate(mrb_state *mrb, size_t nmatch, size_t offset);
 
+static mrb_int str_index_char2byte(const char *str, mrb_int len, mrb_int nchars)
+{
+  if (nchars < 0) {
+    nchars += len;
+    if (nchars < 0) {
+      return -1;
+    }
+  } else if (nchars > len) {
+    return -1;
+  }
+
+  return nchars;
+}
+
 static const char match_gv_names[][3] =
   {
    "$1",
@@ -136,11 +150,16 @@ static mrb_value mrb_posixregexp_match(mrb_state *mrb, mrb_value self)
 
   mrb_get_args(mrb, "z|i", &input, &pos);
   input_len = (mrb_int)strlen(input);
+  pos = str_index_char2byte(input, input_len, pos);
 
-  if (pos > input_len)
-    mrb_raise(mrb, E_REGEXP_ERROR, "pos goes over target string");
-  if (pos)
-    input = input + pos;
+  if (pos < 0) {
+    mrb_gv_set(mrb, mrb_intern_lit(mrb, "$matchdata"), mrb_nil_value());
+    for (int i = 0; !match_gv_names[i]; i++) {
+      mrb_gv_set(mrb, mrb_intern_cstr(mrb, match_gv_names[i]), mrb_nil_value());
+    }
+    return mrb_nil_value();
+  }
+  input += pos;
 
   size_t nmatch = reg->re_nsub + 1;
   mrb_value matched = mrb_posixmatchdata_generate(mrb, nmatch, pos);
