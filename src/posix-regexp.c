@@ -89,6 +89,16 @@ str_index_byte2char(mrb_state *mrb, const char *str, mrb_int len, mrb_int nbytes
 }
 #endif /* MRB_UTF8_STRING */
 
+static mrb_int
+matchdata_check_index(mrb_state *mrb, mrb_int pos, mrb_int max)
+{
+  if (pos < 0 || pos >= max) {
+    mrb_raise(mrb, E_INDEX_ERROR, "index out of matches");
+  }
+
+  return pos;
+}
+
 static const char match_gv_names[][3] =
   {
    "$1",
@@ -293,9 +303,7 @@ static mrb_value mrb_posixmatchdata_begin(mrb_state *mrb, mrb_value self)
 
   mrb_int pos;
   mrb_get_args(mrb, "i", &pos);
-
-  if(pos >= data->len)
-    return mrb_nil_value();
+  pos = matchdata_check_index(mrb, pos, data->len);
 
   int d = data->matches[pos].rm_so;
   if (d == -1)
@@ -314,9 +322,7 @@ static mrb_value mrb_posixmatchdata_end(mrb_state *mrb, mrb_value self)
 
   mrb_int pos;
   mrb_get_args(mrb, "i", &pos);
-
-  if(pos > data->len)
-    return mrb_nil_value();
+  pos = matchdata_check_index(mrb, pos, data->len);
 
   int d = data->matches[pos].rm_eo;
   if (d == -1)
