@@ -155,6 +155,11 @@ assert('String#gsub') do
   assert_equal "@-acbcb@-abbackb@-acbcb@-abb", "acbabackbacbab".gsub(/a(.?b)/, '@-\0\1')
   assert_equal "aBcdaBcd", "abcdabcd".gsub(/b/, 'B')
   assert_equal "@-acbcb@-abbackb@-acbcbaxxb", "acbabackbacbaxxb".gsub(/a(.?b)/, '@-\0\1')
+
+  assert_equal ",1,2,3,4,5,6,7,8,9,", "123456789".gsub(/()/, ",")
+  assert_equal ",,,,,,,,,,", "123456789".gsub(/(.?)/, ",")
+  assert_equal ",1,,2,3,4,5,6,7,8,9,", "1:23456789".gsub(/(:?)/, ",")
+  assert_equal ",1,,2,,3,,4,,5,6,7,8,9,", "1:2:3:4:56789".gsub(/(:)?/, ",")
 end
 
 assert('String#sub') do
