@@ -100,8 +100,9 @@ static const char match_gv_names[][3] =
    "$7",
    "$8",
    "$9",
-   {0}
   };
+
+#define match_gv_names_len (sizeof(match_gv_names) / sizeof(match_gv_names[0]))
 
 static void mrb_regfree(mrb_state *mrb, void *p) {
   if (p != NULL) {
@@ -203,7 +204,7 @@ static mrb_value mrb_posixregexp_match(mrb_state *mrb, mrb_value self)
 
   if (pos < 0) {
     mrb_gv_set(mrb, mrb_intern_lit(mrb, "$matchdata"), mrb_nil_value());
-    for (int i = 0; !match_gv_names[i]; i++) {
+    for (int i = 0; i < match_gv_names_len; i++) {
       mrb_gv_set(mrb, mrb_intern_cstr(mrb, match_gv_names[i]), mrb_nil_value());
     }
     return mrb_nil_value();
@@ -221,7 +222,7 @@ static mrb_value mrb_posixregexp_match(mrb_state *mrb, mrb_value self)
     break;
   case REG_NOMATCH:
     mrb_gv_set(mrb, mrb_intern_lit(mrb, "$matchdata"), mrb_ary_new(mrb));
-    for (int i = 0; !match_gv_names[i]; i++) {
+    for (int i = 0; i < match_gv_names_len; i++) {
       mrb_gv_set(mrb, mrb_intern_cstr(mrb, match_gv_names[i]), mrb_ary_new(mrb));
     }
 
@@ -246,7 +247,7 @@ static mrb_value mrb_posixregexp_match(mrb_state *mrb, mrb_value self)
   mrb_iv_set(mrb, matched, mrb_intern_lit(mrb, "@length"), mrb_fixnum_value(nmatch));
 
   mrb_gv_set(mrb, mrb_intern_lit(mrb, "$matchdata"), matched);
-  for (int i = 0; (i < nmatch - 1 && match_gv_names[i]) ; i++) {
+  for (int i = 0; (i < nmatch - 1 && i < match_gv_names_len) ; i++) {
     mrb_gv_set(mrb, mrb_intern_cstr(mrb, match_gv_names[i]),
                mrb_funcall(mrb, matched, "[]", 1, mrb_fixnum_value(i + 1)));
   }
