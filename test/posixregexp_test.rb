@@ -161,3 +161,28 @@ assert('String#sub') do
   assert_equal "@-abackbacbab", "acbabackbacbab".sub(/a.?b/, "@-")
   assert_equal "@-acbcbabackbacbab", "acbabackbacbab".sub(/a(.?b)/, '@-\0\1')
 end
+
+# See the commit message below for the reason why the emoji is used to determine UTF-8.
+# However, it would be better to rewrite it in the future.
+# https://github.com/mruby/mruby/commit/906f9f2ba752c53162bf4bab6264b78a38f05fd8
+if "💫".size == 1
+  assert('PosixRegexp#match (with UTF-8)') do
+    assert_not_nil /５/.match("１２３４５６７８９", 4)
+    assert_nil /５/.match("１２３４５６７８９", 5)
+    assert_nil /５/.match("１２３４５６７８９", -4)
+  end
+
+  assert('PosixMatchData#begin') do
+    m = /((ａ)?(ｚ)?ｘ)?/.match("ｚｘ")
+    assert_equal 0, m.begin(3)
+  end
+
+  assert('PosixMatchData#end') do
+    m = /((ａ)?(ｚ)?ｘ)?/.match("ｚｘ")
+    assert_equal 1, m.end(3)
+  end
+
+  assert('String#gsub (with UTF-8)') do
+    assert_equal "１２３４５６７８９✔", "１２３４５６７８９✘".gsub(/✘/, "✔")
+  end
+end
