@@ -47,7 +47,7 @@ class String
         len = m.begin(0) - index + m.to_s.length
         if len == 0
           len = 1
-          n = self[(index+len+1)]
+          n = self[index]
           str += n unless n.nil?
         end
         break if m.begin(0) - index < 0
