@@ -13,21 +13,23 @@
 #include <mruby/value.h>
 #include <mruby/array.h>
 #include <mruby/error.h>
-
-#ifdef MRB_DEBUG
-#include <mruby/string.h>
-#endif
+#include <mruby/string.h> /* for mrb_utf8len() and mrb_utf8_strlen() with MRB_UTF8_STRING */
 
 #include "mrb_posix_regexp.h"
 
 #include <string.h>
 #include <regex.h>
 
+#if defined(MRB_UTF8_STRING) && MRUBY_RELEASE_NO < 20101
+# error "Need mruby-2.1.1 or later when building with MRB_UTF8_STRING"
+#endif
+
 #define DONE mrb_gc_arena_restore(mrb, 0);
 static mrb_value mrb_posixmatchdata_generate(mrb_state *mrb, size_t nmatch, size_t offset);
 
 static mrb_int str_index_char2byte(const char *str, mrb_int len, mrb_int nchars)
 {
+#ifndef MRB_UTF8_STRING
   if (nchars < 0) {
     nchars += len;
     if (nchars < 0) {
@@ -38,7 +40,54 @@ static mrb_int str_index_char2byte(const char *str, mrb_int len, mrb_int nchars)
   }
 
   return nchars;
+#else
+  if (nchars < 0) {
+    nchars += mrb_utf8_strlen(str, len);
+    if (nchars < 0) {
+      return -1;
+    }
+  }
+
+  const char *strend = str + len;
+  mrb_int nbytes = 0;
+  for (; nchars > 0; nchars--) {
+    if (str >= strend) {
+      return -1;
+    }
+    mrb_int chlen = mrb_utf8len(str, strend);
+    str += chlen;
+    nbytes += chlen;
+  }
+
+  return nbytes;
+#endif /* MRB_UTF8_STRING */
 }
+
+#ifdef MRB_UTF8_STRING
+static mrb_int
+str_index_byte2char(mrb_state *mrb, const char *str, mrb_int len, mrb_int nbytes)
+{
+  if (nbytes < 0 || nbytes > len) {
+  index_error:
+    mrb_raise(mrb, E_RUNTIME_ERROR, "wrong byte index");
+  }
+
+  const char *strend = str + len;
+  mrb_int nchars = 0;
+  while (nbytes > 0 && str < strend) {
+    int chlen = mrb_utf8len(str, strend);
+    str += chlen;
+    nbytes -= chlen;
+    nchars++;
+  }
+
+  if (nbytes > 0) {
+    goto index_error;
+  }
+
+  return nchars;
+}
+#endif /* MRB_UTF8_STRING */
 
 static const char match_gv_names[][3] =
   {
@@ -222,6 +271,19 @@ static mrb_value mrb_posixmatchdata_generate(mrb_state *mrb, size_t nmatch, size
   return self;
 }
 
+static mrb_value matchdata_byte2char(mrb_state *mrb, mrb_value self, const struct mrb_matchdata *data, int d)
+{
+#ifndef MRB_UTF8_STRING
+  return mrb_fixnum_value(d + data->offset);
+#else
+  mrb_value str = mrb_iv_get(mrb, self, mrb_intern_lit(mrb, "@string"));
+  mrb_ensure_string_type(mrb, str);
+  const char *strp = RSTRING_PTR(str);
+  mrb_int strl = RSTRING_LEN(str);
+  return mrb_fixnum_value(str_index_byte2char(mrb, strp, strl, d + data->offset));
+#endif
+}
+
 static mrb_value mrb_posixmatchdata_begin(mrb_state *mrb, mrb_value self)
 {
   struct mrb_matchdata *data = DATA_PTR(self);
@@ -238,7 +300,7 @@ static mrb_value mrb_posixmatchdata_begin(mrb_state *mrb, mrb_value self)
   if (d == -1)
     return mrb_nil_value();
 
-  return mrb_fixnum_value(d + data->offset);
+  return matchdata_byte2char(mrb, self, data, d);
 }
 
 mrb_value mrb_posixregexp_quote(mrb_state *mrb, mrb_value self);
@@ -259,7 +321,7 @@ static mrb_value mrb_posixmatchdata_end(mrb_state *mrb, mrb_value self)
   if (d == -1)
     return mrb_nil_value();
 
-  return mrb_fixnum_value(d + data->offset);
+  return matchdata_byte2char(mrb, self, data, d);
 }
 
 void mrb_mruby_posix_regexp_gem_init(mrb_state *mrb)
