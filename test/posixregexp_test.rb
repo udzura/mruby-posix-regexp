@@ -74,6 +74,8 @@ assert('PosixMatchData#begin') do
   assert_equal 0, m.begin(1)
   assert_equal nil, m.begin(2)
   assert_equal 0, m.begin(3)
+  assert_raise(IndexError) { m.begin(4) }
+  assert_raise(IndexError) { m.begin(-1) }
 end
 
 assert('PosixMatchData#end') do
@@ -82,6 +84,8 @@ assert('PosixMatchData#end') do
   assert_equal 2, m.end(1)
   assert_equal nil, m.end(2)
   assert_equal 1, m.end(3)
+  assert_raise(IndexError) { m.end(4) }
+  assert_raise(IndexError) { m.end(-1) }
 end
 
 assert('PosixMatchData#post_match') do
